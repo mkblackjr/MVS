@@ -1,0 +1,584 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+
+# Created on Wed Nov  1 10:37:35 2017
+# @author: mac
+
+#:kivy 1.10.0
+
+<Widget>:
+    font_name: "Meteora"
+
+<Background@BoxLayout>:
+    # Background Color
+    canvas:
+        Color:
+            rgb: 1,1,1 # White
+            # rgb: 0,0,0 # Black
+        Rectangle:
+            size: root.parent.size
+            pos: root.parent.pos
+
+
+<VideoFeed>:
+    canvas:
+        Color:
+            rgba: 0,1,0,0.4
+        Ellipse:
+            id: video_ellipse
+            size: root.height*5/6,root.height*5/6
+            pos: root.x + root.width/2 - 5*root.height/12,root.y + root.height/12 
+    Label:
+        font_size: "15dp"
+        center_x: root.x + root.width/2
+        center_y: root.y + (root.height-12)
+        text: "Live Video"        
+
+
+<PetriMap>:
+    canvas:
+        Color:
+            rgba: 1,1,1,1
+        Ellipse:
+            size: root.height*5/6,root.height*5/6
+            pos: root.x + root.width/2 - 5*root.height/12,root.y + root.height/12
+    Image:
+        source:"polarGraph.png"
+        size: root.height*5/6,root.height*5/6
+        center: root.x + root.width/2,root.y + root.height/2
+    Label:
+        font_size: "15dp" 
+        center_x: root.x + root.width / 2
+        center_y: root.y + (root.height-12)
+        text: "Position Map"
+    
+
+<MenuButton@Button>:
+    font_size: 15
+    size_hint: 1,1
+
+
+<TargetTextBox@TextInput>:
+    font_size: 8
+    size_hint: 3/4,1/2
+    center_x: root.parent.x + root.parent.width/2
+    center_y: root.parent.y + root.parent.height
+
+
+<DirectionalArrowButtons>:
+    anchor_x: "right"
+    GridLayout:
+        size_hint: 15/16,1
+        rows: 3
+        cols: 3
+        padding: "10dp"
+       
+        # Empty Space
+        Label:
+        
+        # Forward Button
+        Button:
+            id: forward_button
+            on_release: root.forward()
+            background_normal: ''
+            background_color: 0,0,0,0
+            canvas:
+                Rectangle:
+                    source: "ArrowUp.png"
+                    pos: self.x,self.y
+                    size: self.width,self.height
+        
+        # Up Button
+        Button:
+            id: up_button
+            on_release: root.up()
+            background_normal: ''
+            background_color: 0,0,0,0
+            canvas:
+                Color:
+                    rgb: 1,0.647,0
+                Ellipse:
+                    pos: self.x + self.width/16,self.y + self.height/2 - 7*self.width/16
+                    size: 7*self.width/8,7*self.width/8
+                Color:
+                    rgb: 0,0,0
+                Ellipse:
+                    pos: self.x + self.width/8,self.y + self.height/2 - 3*self.width/8
+                    size: 3*self.width/4,3*self.width/4
+                Color:
+                    rgb: 1, 0.647,0
+                Ellipse:
+                    pos: self.x + 3*self.width/8,self.y + self.height/2 - self.width/8
+                    size: self.width/4,self.width/4
+        
+        # Left Button
+        Button:
+            id: left_button
+            on_release: root.left()
+            background_normal: ''
+            background_color: 0,0,0,0
+            canvas:
+                Rectangle:
+                    source: "ArrowLeft.png"
+                    pos: self.x,self.y
+                    size: self.width,self.height
+        
+        # Empty Space
+        Label:
+        
+        # Right Button
+        Button:
+            id: right_button
+            on_release: root.right()
+            background_normal: ''
+            background_color: 0,0,0,0
+            canvas:
+                Rectangle:
+                    source: "ArrowRight.png"
+                    pos: self.x,self.y
+                    size: self.width,self.height
+        
+        # Down Button
+        Button:
+            id: down_button
+            on_release: root.down()
+            background_normal: ''
+            background_color: 0,0,0,0
+            canvas:
+                Color:
+                    rgb: 1,0.647,0
+                Ellipse:
+                    pos: self.x + self.width/16,self.y + self.height/2 - 7*self.width/16
+                    size: 7*self.width/8,7*self.width/8
+                Color:
+                    rgb: 0,0,0
+                Ellipse:
+                    pos: self.x + self.width/8,self.y + self.height/2 - 3*self.width/8
+                    size: 3*self.width/4,3*self.width/4
+                Color:
+                    rgb: 1, 0.647,0
+                Line:
+                    points:[self.x+self.width/2 - 7*1.414/32*self.width,self.y+self.height/2 - 7*1.414/32*self.width, self.x+self.width/2 + 7*1.414/32*self.width,self.y+self.height/2 + 7*1.414/32*self.width]
+                Line:
+                    points:[self.x+self.width/2 - 7*1.414/32*self.width,self.y+self.height/2 + 7*1.414/32*self.width, self.x+self.width/2 + 7*1.414/32*self.width,self.y+self.height/2 - 7*1.414/32*self.width]
+        
+        # Backward Button
+        Button:
+            id: backward_button
+            on_release: root.backward()
+            background_normal: ''
+            background_color: 0,0,0,0
+            canvas:
+                Rectangle:
+                    source: "ArrowDown.png"
+                    pos: self.x,self.y
+                    size: self.width,self.height
+        
+        # Empty Space
+        Label:
+
+
+<MovementPane@BoxLayout>:
+    padding: self.parent.height/64,self.parent.height/64
+    canvas:
+        Color:
+            rgb: 1,0.647,0
+        Rectangle:
+            pos: self.x+(1/2)*self.width*31/32,self.y
+            size: 1/2*self.width/16,self.height
+                            
+    # Target Coordinates
+    BoxLayout:
+        orientation: "vertical"
+        AnchorLayout:
+            size_hint:15/16,1
+            TargetTextBox:
+                id: x_target
+                hint_text: "X Target"
+        AnchorLayout:
+            size_hint:15/16,1
+            TargetTextBox:
+                id: y_target
+                hint_text: "Y Target"
+        AnchorLayout:
+            size_hint:15/16,1
+            TargetTextBox:
+                id: z_target
+                hint_text: "Z Target"
+    
+    # Layout for Directional Movement Arrows
+    DirectionalArrowButtons:
+        id: directional_arrow_buttons
+
+
+<FrameOutline@BoxLayout>:
+    padding: root.height/32
+    canvas:
+        Color:
+            # rgb: 0,0,.8039 # Blue
+            rgb: 1,0.647,0 # Orange
+        Rectangle:
+            pos: root.x,root.y
+            size: root.width,root.height
+        Color:
+            rgb: 0,0,0
+        Rectangle:
+            pos: root.x + root.height/32, root.y + root.height/32
+            size: root.width-root.height/16,15/16*root.height
+
+
+<LeftColumn@BoxLayout>:
+    size_hint: 1/2,1
+    orientation: "vertical"
+    spacing: "10dp"
+
+
+<RightColumn@GridLayout>:
+    rows: 2
+    spacing: "10dp"
+
+
+<MainScreen@Screen>:
+    name: "Main"
+    BoxLayout:
+        orientation: "vertical"
+        Label:
+            size_hint: 1,0.05
+            text: "MVS Surveillance"
+            valign: "bottom"
+        GridLayout:
+            # id assignments
+            polar_map: petri_map
+            camera: video_feed
+            position: 0,0,0
+            
+            # MVSS Layout Settings
+            cols: 2
+            padding: "10dp"
+            spacing: "10dp"
+
+            # Background Color
+            Background:
+                id: background
+                spacing: "10dp"
+            
+                # Left Column: Visual Data
+                LeftColumn:
+                    id: left_column
+                    
+                    # Children
+                    FrameOutline:
+                        id: petri_frame
+                        PetriMap:
+                            id: petri_map
+                    
+                    FrameOutline:
+                        id: video_frame
+                        VideoFeed:
+                            id: video_feed
+                
+                # Right Column: User Settings and Controls       
+                RightColumn:
+                    id: right_column
+
+                    # Upper (Right) Layout
+                    BoxLayout:  
+                        spacing: "10dp"       
+                
+                        # Motion Settings Pane
+                        FrameOutline:
+                            orientation: "vertical"
+                            
+                            AnchorLayout:
+                                BoxLayout:
+                                    orientation: "vertical"
+                                    
+                                    Label:
+                                        text: "Camera Velocity"
+                                        size_hint: 1,0.2
+                                    GridLayout:
+                                        cols:2
+                                        BoxLayout:
+                                            orientation: "vertical"
+                                            Button:
+                                                text: "Up"
+                                                on_press: 
+                                                    root.parent.velocity += 1
+                                                    root.ids.velocity_label.text = root.parent.vel_str + " mm/sec"
+                                            Button:
+                                                text: "Down"
+                                                on_press:
+                                                    root.parent.velocity -= 1
+                                                    root.ids.velocity_label.text = root.parent.vel_str + " mm/sec"
+                                        Label:
+                                            id: velocity_label
+                                            font_size: 15
+                                            font_name: "Arial"
+                                            text: "0 mm/sec"
+
+                            AnchorLayout:
+                                size_hint: 1,0.75
+                                canvas:
+                                    Color:
+                                        rgb: 1,0.647,0
+                                    Rectangle:
+                                        pos: self.x,self.y+self.height*15/16
+                                        size: self.width,self.height/16
+                                BoxLayout:
+                                    orientation: "vertical"
+                                    BoxLayout:
+                                        padding: "10dp"
+                                        Label: 
+                                            size_hint: 1,0.2
+                                            text: "Trajectory Mode"
+                                    ToggleButton:
+                                        text: "XYZ"
+                                        group: "Mode"
+                                        allow_no_selection: False
+                                    ToggleButton:
+                                        text: "Radial"
+                                        group: "Mode"
+                                        state: "down"
+                                        allow_no_selection: False
+                            
+                        # Motion Execution Frame
+                        FrameOutline:
+                        
+                            # Aesthetics
+                            orientation: "vertical"
+                            padding: "10dp"
+                            
+                            # Target Assignment and Directional Movement Frame
+                            MovementPane:
+                        
+                            # Queue Next Target Button
+                            AnchorLayout:
+                                size_hint: 1,0.75
+                                anchor_y: "bottom"
+                                canvas:
+                                    Color:
+                                        rgb: 1,0.647,0
+                                    Rectangle:
+                                        pos: self.x,self.y+self.height*15/16
+                                        size: self.width,self.height/16
+                                Button:
+                                    text: "Queue Target"  
+                                    size_hint: 1,15/16
+                    
+                    # Lower (Right) Layout
+                    BoxLayout:
+                        spacing: "10dp"
+                        
+                        FrameOutline:
+                            BoxLayout:
+                                orientation: "vertical"
+                                
+                                GridLayout:
+                                    size_hint: 1,1/3
+                                    rows: 2
+                                    canvas:
+                                        Color:
+                                            rgb: 1,0.647,0
+                                        Rectangle:
+                                            pos: self.x,self.y
+                                            size: self.parent.width,self.parent.height/32
+                                    
+                                    Label:
+                                        font_size: 15
+                                        text: "Current Target"
+                                    
+                                    BoxLayout:
+                                        AnchorLayout:
+                                            anchor_x: "right"
+                                            anchor_y: "top"
+                                            TargetTextBox:
+                                                hint_text: "X"
+                                                size_hint: 0.7,0.6
+                                        AnchorLayout:
+                                            anchor_y: "top"
+                                            TargetTextBox:
+                                                hint_text: "Y"
+                                                size_hint: 0.7,0.6
+                                        AnchorLayout:
+                                            anchor_x: "left"
+                                            anchor_y: "top"
+                                            TargetTextBox:
+                                                hint_text: "Z"
+                                                size_hint: 0.7,0.6
+                                      
+                                BoxLayout:
+                                    orientation: "vertical"
+
+                                    AnchorLayout:
+                                        size_hint: 1,0.2
+                                        anchor_y: "bottom"
+                                        Label:
+                                            text: "Trajectory Log"
+                                    AnchorLayout:
+                                        anchor_x: "center"
+                                        anchor_y: "center"
+                                        canvas:
+                                            Color: 
+                                                rgba: 1,1,1,1
+                                            Rectangle:
+                                                size: self.size
+                                                pos: self.pos
+                                        
+                                                           
+                                            
+                                
+                        
+                        FrameOutline:
+                            
+                            GridLayout:
+                                rows: 2
+                                cols: 2
+                                #padding: "5dp"
+                                #spacing: "5dp"
+                                MenuButton:
+                                    id: retrace_button
+                                    text: "Retrace"
+                                MenuButton:
+                                    id: import_button
+                                    text: "Import"
+                                    on_release:
+                                        root.parent.transition.direction = 'up'
+                                        root.parent.current = 'Import'
+                                MenuButton:
+                                    id: save_button
+                                    text: "Save"
+                                    on_release:
+                                        root.parent.transition.direction = 'right' 
+                                        root.parent.current = 'Save'
+                                MenuButton:
+                                    id: quit_button
+                                    text: "Quit"
+                                    on_release:
+                                        root.parent.transition.direction = 'left' 
+                                        root.parent.current = 'Quit'
+
+
+<QuitScreen@Screen>:
+    name: "Quit"
+    FrameOutline:
+        orientation: "vertical"
+        
+        Label: 
+            text: "Do you really want to quit?"
+        
+        BoxLayout:
+            Button:
+                text: "No"
+                on_release: 
+                    print(app.root)
+                    print(app.root.vel_str)
+                    root.parent.transition.direction = 'right'
+                    root.parent.current = 'Main'
+            Button:
+                text: "Yes"
+                on_release: app.stop()
+
+
+<SaveScreen@Screen>:
+    name: "Save"
+    filepath: filepath
+    FrameOutline:
+        orientation: "vertical"
+
+        Label:
+            size_hint: 1,0.33
+            text: "Please specify the filepath."
+        
+        FileChooserListView:
+            on_selection: filepath.text = self.selection and self.selection[0] or ''
+        
+        TextInput:
+            id: filepath
+            multiline: False
+            size_hint: 1,0.2
+
+        BoxLayout:
+            size_hint: 1,0.5
+            Button:
+                text: "Cancel"
+                on_release: 
+                    root.parent.transition.direction = 'left'
+                    root.parent.current = 'Main'
+            Button:
+                text: "Save"
+                on_release:
+                    root.parent.transition.direction = 'left'
+                    root.parent.current = 'Main'
+
+
+<ImportScreen@Screen>:
+    name: "Import"
+    filepath: filepath
+    FrameOutline:
+        orientation: "vertical"
+
+        Label:
+            size_hint: 1,0.33
+            text: "Please select the file containing the new set of trajectories."
+        
+        FileChooserListView:
+            on_selection: filepath.text = self.selection and self.selection[0] or ''
+
+        TextInput:
+            id: filepath
+            multiline: False
+            size_hint: 1,0.2
+
+        BoxLayout:
+            size_hint: 1,0.5
+            Button:
+                text: "Cancel"
+                on_release: 
+                    root.parent.transition.direction = 'down'
+                    root.parent.current = 'Main'
+            Button:
+                text: "Import"
+                on_release: 
+                    root.parent.transition.direction = 'down'
+                    root.parent.current = 'Main'
+
+
+<WelcomeScreen@Screen>:
+    name: "Welcome"
+    FrameOutline:
+        orientation: "vertical"
+
+        Label:
+            size_hint: 1,0.33
+            text: "MVS Application"
+
+        Button:
+            text: "Begin"
+            on_release:
+                root.parent.transition = FallOutTransition()
+                root.parent.current = 'Main'
+
+        Button:
+            text: "Exit"
+            on_release:
+                app.stop()
+
+
+<MVSS>:
+    polar_map: root.ids.main_screen.ids.petri_map
+    camera: root.ids.main_screen.ids.video_feed
+    WelcomeScreen:
+        id: welcome_screen
+    MainScreen:
+        id: main_screen
+    QuitScreen:
+        id: quit_screen
+    SaveScreen:
+        id: save_screen
+    ImportScreen:
+        id: import_screen
+
+         
+        
+    
+            
