@@ -1,26 +1,11 @@
-# motorsUI.py
-
-""" 
-Motor Control User Interface Definition
-
-This program defines a class called motorsUI which acts as the interface for 
-motor control for the MVSS. It includes a move() method which is capable of
-handling several different travel modes, which include XYZ and Polar for 
-target-based movement, as well as axi-directional commands. It updates the 
-position of the camera on a canvas with a polar coordinate grid background.
-
-"""
 import tkinter as tk
 from tkinter import *
 from PIL import ImageTk, Image
 import math
-import serial
 import CoordinateFunctions as cf
 import SerialFunctions as sf
 import numpy as np
 import time
-import random
-import csv
 
 ###############################################################################
 ############################## Class Definition ###############################
@@ -29,19 +14,21 @@ import csv
 class motorsUI(tk.Tk):
 	
 	# Initializer
-	def __init__(self, serial_connection, scale_factor, step_increment,
+	def __init__(self, arduino_filler, scale_factor, step_increment,
 		trajectory_res, minimum_distance, ideal_color, step_color):
 		
 		tk.Tk.__init__(self)
 
+		# # This could really use some cleaning up # #
+
 		# # Class variables
 		self.travel_mode = 0
+		# Position mapping settings
 		self.white = "#ffffff"
 		self.blank_rect_width = 10
 		self.grid_path = "/Users/mac/Documents/MVSS/CircularGrid.gif"
 		self.position = [0,0,0]# "R0T0Z0" # Initially at origin
 		self.ideal_position = self.position
-		
 		# Physical parameters
 		in_to_mm = 25.4
 		steps_per_rev_motor = 4096
@@ -49,22 +36,22 @@ class motorsUI(tk.Tk):
 		gear_diameter = 20 # mm
 		planetary_gear_diameter = 5.25*in_to_mm # mm
 		gear_ratio = gear_diameter/planetary_gear_diameter
-		motor_step_correction_factor = 510/4096
-		# MM_PER_STEP_DZ = 0.0062 # Number of milimeters per step for DR
-		# RADS_PER_STEP_DT = 0.00147 # Number of rads per step for DTheta
-		# MM_PER_STEP_DR = 0.123 # Number of milimeters per step for DZ
-		MM_PER_STEP_DZ = 0.0062*motor_step_correction_factor
-		RADS_PER_STEP_DT = rads_per_step_motor*gear_ratio
-		MM_PER_STEP_DR = gear_diameter*math.pi/steps_per_rev_motor
-		execution_time_per_step = 0.0010664 # seconds per step
+		motor_step_correction_factor = 501/4096
+		# self.MM_PER_STEP_DZ = 0.0062 # Number of milimeters per step for DR
+		# self.RADS_PER_STEP_DT = 0.00147 # Number of rads per step for DTheta
+		# self.MM_PER_STEP_DR = 0.123 # Number of milimeters per step for DZ
+		self.MM_PER_STEP_DZ = 0.0062*motor_step_correction_factor
+		self.RADS_PER_STEP_DT = rads_per_step_motor*gear_ratio
+		self.MM_PER_STEP_DR = gear_diameter*math.pi/steps_per_rev_motor
+		self.execution_time_per_step = 0.0010664 # seconds per step
 
 		# Frame
 		self.frame = tk.Frame(self, width=400, height=400)
 		self.frame.pack(side="top", fill="both", expand=True)
 		
 		# Exit Button
-		self.b_exit = tk.Button(self.frame, text="Exit", command=lambda: 
-			self.exit_program(serial_connection))
+		self.b_exit = tk.Button(self.frame, text="Exit",
+			command=lambda: self.exit_program())
 		self.b_exit.grid(row=8, column=1)
 
 		# Frames for directional buttons
@@ -81,35 +68,23 @@ class motorsUI(tk.Tk):
 
 		# Directional buttons
 		self.b_up = tk.Button(self.f_up, text="Up", command=lambda: 
-			self.move(serial_connection, 'U', trajectory_res,
-				minimum_distance, MM_PER_STEP_DR, RADS_PER_STEP_DT, 
-				MM_PER_STEP_DZ, execution_time_per_step, ideal_color,
-				step_color, scale_factor))
+			self.move('U', trajectory_res,
+				minimum_distance, ideal_color, step_color))
 		self.b_down = tk.Button(self.f_down, text="Down", command=lambda: 
-			self.move(serial_connection, 'D', trajectory_res,
-				minimum_distance, MM_PER_STEP_DR, RADS_PER_STEP_DT, 
-				MM_PER_STEP_DZ, execution_time_per_step, ideal_color,
-				step_color, scale_factor))
+			self.move('D', trajectory_res,
+				minimum_distance, ideal_color, step_color))
 		self.b_right = tk.Button(self.f_right, text="Right", command=lambda: 
-			self.move(serial_connection, 'R', trajectory_res,
-				minimum_distance, MM_PER_STEP_DR, RADS_PER_STEP_DT, 
-				MM_PER_STEP_DZ, execution_time_per_step, ideal_color,
-				step_color, scale_factor))
+			self.move('R', trajectory_res,
+				minimum_distance, ideal_color, step_color))
 		self.b_left = tk.Button(self.f_left, text="Left", command=lambda: 
-			self.move(serial_connection, 'L', trajectory_res,
-				minimum_distance, MM_PER_STEP_DR, RADS_PER_STEP_DT, 
-				MM_PER_STEP_DZ, execution_time_per_step, ideal_color,
-				step_color, scale_factor))
+			self.move('L', trajectory_res,
+				minimum_distance, ideal_color, step_color))
 		self.b_forward = tk.Button(self.f_forwardbackward, text="Forward", 
-			command=lambda: self.move(serial_connection, 'F', 
-			trajectory_res, minimum_distance, MM_PER_STEP_DR, RADS_PER_STEP_DT,
-				MM_PER_STEP_DZ, execution_time_per_step, ideal_color,
-				step_color, scale_factor))
+			command=lambda: self.move('F', 
+			trajectory_res, minimum_distance, ideal_color, step_color))
 		self.b_backward = tk.Button(self.f_forwardbackward, text="Backward", 
-			command=lambda: self.move(serial_connection, 'B', 
-			trajectory_res, minimum_distance, MM_PER_STEP_DR, RADS_PER_STEP_DT,
-				MM_PER_STEP_DZ, execution_time_per_step, ideal_color,
-				step_color, scale_factor))
+			command=lambda: self.move('B', 
+			trajectory_res, minimum_distance, ideal_color, step_color))
 		self.b_up.pack() 
 		self.b_down.pack() 
 		self.b_right.pack() 
@@ -131,7 +106,7 @@ class motorsUI(tk.Tk):
 		self.distance_dirname.grid(row=1,column=0)
 		self.distance_dirname.insert(0,"10")
 
-		# Slider for speed input
+		# Slider for step input
 		self.speed_frame = tk.Frame(self.frame, height=100, width=100)
 		self.speed_frame.grid(row=0,column=1)
 		self.speed_labelText = StringVar()
@@ -140,9 +115,9 @@ class motorsUI(tk.Tk):
 			textvariable=self.speed_labelText, height=1)
 		self.speed_labelDir.grid(row=0,column=1)
 		self.speed_directory = StringVar(None)
-		self.speed_slider = tk.Scale(self.speed_frame, from_=1, to=10, length=600, 
+		self.step_slider = tk.Scale(self.speed_frame, from_=1, to=10, length=600, 
 			tickinterval=1 ,orient=HORIZONTAL)
-		self.speed_slider.grid(row=1, columnspan=3)
+		self.step_slider.grid(row=1, columnspan=3)
 
 		# Buttons for the selection of Polar travel vs. Cartesian travel
 		self.travel_frame = tk.Frame(self.frame, height=100, width=100)
@@ -157,15 +132,13 @@ class motorsUI(tk.Tk):
 		self.radio_polar.grid(row=0, column=1)
 
 		# Frame for X, Y, Z target coordinates
-		self.XYZ_frame = tk.Frame(self.frame, height=100, width=100) 
+		self.XYZ_frame = tk.Frame(self.frame, height=100, width=100)
 		self.XYZ_frame.grid(row=6, columnspan=3)
 		
 		# Button for targeted movement execution
 		self.go_button = tk.Button(self.XYZ_frame, text="Go", command=lambda: 
-			self.move(serial_connection, 'G', trajectory_res,
-				minimum_distance, MM_PER_STEP_DR, RADS_PER_STEP_DT, 
-				MM_PER_STEP_DZ, execution_time_per_step, ideal_color,
-				step_color, scale_factor))
+			self.move('G', trajectory_res,
+				minimum_distance, ideal_color, step_color))
 		self.go_button.grid(row=2, column=1)
 
 		# X Target Coordinate Entry Box
@@ -224,14 +197,14 @@ class motorsUI(tk.Tk):
 		self.canvas.create_rectangle(0,0,self.canvas.winfo_width(),
 			self.blank_rect_width,outline=self.white, fill=self.white)
 
-###############################################################################
-############################# Associated Methods ##############################
-###############################################################################
 
-	def move(self, open_serial_port, direction, resolution, d_threshold,
-		R_conversion, Theta_conversion, Z_conversion, execution_time_per_step,
-		ideal_color, step_color, scale_factor):
-		# Disable all other moving buttons while camera travels to destination
+		# # # Other features to eventually add # # #
+		
+		# Point and click target setting
+
+	def move(self, direction, resolution, d_threshold,
+		ideal_color, step_color):
+		# Disable all other buttons while camera travels to destination
 		self.disable_screen()
 
 		# Initializations
@@ -240,16 +213,15 @@ class motorsUI(tk.Tk):
 		travel_mode = self.travel_mode
 		ds_array = []
 		res = resolution
-		vel = self.speed_slider.get() # will need changing upon new UI
+		vel = self.step_slider.get()
 
-		# Acquire current x, y, z position
+		# Acquire current x, y, z position from encoded string
 		[R, Theta, Z] = cf.get_current_position(self.position)
 		[x, y, z] = cf.cyl_to_xyz(R, Theta, Z)
 		ideal_x = self.ideal_position[0]
 		ideal_y = self.ideal_position[1]
 		ideal_z = self.ideal_position[2]
 
-		# Determine the final target
 		if(direction=='G'):
 			target = [np.array(self.acquire_target_pos())]
 		else:
@@ -286,16 +258,24 @@ class motorsUI(tk.Tk):
 		print("Target = (" + str(target[0][0]) + ", " + str(target[0][1]) + 
 			", " + str(target[0][2]) + ")")
 
-		# Compute dR, dTheta for case of polar travel mode
 		dR_polar = cf.xyz_to_cyl(target[0][0],target[0][1],target[0][2])[0] - R
 		dTheta_polar = cf.xyz_to_cyl(target[0][0],target[0][1],
 			target[0][2])[1] - Theta
 
-		# Update target(s) to incorporate wall at Theta = 0/2pi
-		target = cf.update_target(target, y, z, ideal_x, ideal_y,
-			travel_mode, direction)
+		if((not travel_mode) | (direction!='G')):
+			avoid_positive_x_axis = cf.check_path_for_x_wall(ideal_x, ideal_y,
+				target[0][0], target[0][1])
+			if(avoid_positive_x_axis):
+				if(direction=='G'):
+					# 2 legs to/from origin: to origin -> to target
+					target = np.array([[0,0,z+(target[0][2]-z)/2],
+						[target[0][0],target[0][1],target[0][2]]])
+				else:
+					# 3 legs at 90 angle: to y axis, to (0,y_target), to target
+					target = np.array([[0,y,z+(target[0][2]-z)/3],
+						[0,target[0][1],z+2*(target[0][2]-z)/3],[target[0][0],
+						target[0][1],target[0][2]]])
 
-		# Iterate over the target array to hit waypoints
 		for i in range(np.shape(target)[0]):
 			target_reached = False; skip = False
 			res = resolution
@@ -330,8 +310,6 @@ class motorsUI(tk.Tk):
 					skip = True
 					continue
 
-				# In case that target is not reached in time (shouldn't happen
-				# numerically, maybe if trouble handling approaching zero) 
 				if res == 0:
 					target_reached = True
 					print("\nA terminal point was reached based on the " + \
@@ -345,36 +323,24 @@ class motorsUI(tk.Tk):
 					dR = dR_polar/resolution
 					dTheta = dTheta_polar/resolution
 
-				# Compute the ideal number of steps suggested by coord transform
-				R_steps = float(dR)/R_conversion
-				Theta_steps = float(dTheta)/Theta_conversion
-				Z_steps = float(dz)/Z_conversion
-
-				# Calculate steps to send to Arduino (with accumulated remainder)
+				# Calculate the ideal number of steps suggested by coord transform
+				R_steps = float(dR)/self.MM_PER_STEP_DR
+				Theta_steps = float(dTheta)/self.RADS_PER_STEP_DT
+				Z_steps = float(dz)/self.MM_PER_STEP_DZ
 				[R_steps, Theta_steps, Z_steps, remainder_R, remainder_Theta,
 				remainder_Z] = cf.calculate_steps(R_steps, Theta_steps, Z_steps,
 				remainder_R, remainder_Theta, remainder_Z)
 
 				# Finalize wait_time calculation
 				total_steps = R_steps + Theta_steps + Z_steps
-				wait_dR = abs(R_steps*R_conversion)
-				wait_dTheta = abs(Theta_steps*Theta_conversion)
-				wait_dZ = abs(Z_steps*Z_conversion)
+				wait_dR = abs(R_steps*self.MM_PER_STEP_DR)
+				wait_dTheta = abs(Theta_steps*self.RADS_PER_STEP_DT)
+				wait_dZ = abs(Z_steps*self.MM_PER_STEP_DZ)
 				ds = math.sqrt(wait_dR**2+(R*wait_dTheta)**2+wait_dZ**2)
-				wait = 1E3*(ds/vel - execution_time_per_step*total_steps)
+				wait = 1E3*(ds/vel - self.execution_time_per_step*total_steps)
 				print("Wait time is: " + str(wait))
 				if(wait<0):
 					wait = 0
-
-				# Wait for the go ahead signal from arduino
-				sf.wait_for_arduino(open_serial_port)
-
-				# # Write computed integer steps to serial port in encoded form
-				# # 'R___T___Z___'
-				toWrite = cf.encode_step_command(R_steps, Theta_steps,
-					Z_steps, int(wait))
-				print(toWrite)
-				open_serial_port.write(toWrite)
 
 				# Compute ideal movement to check accuracy 
 				# of trajectory following algorithm
@@ -389,15 +355,14 @@ class motorsUI(tk.Tk):
 					", " + str(ideal_y) + ", " + str(ideal_z) + ")\n")
 
 				# Compute actual movement based on steps taken
-				R_check = R + R_steps*R_conversion
-				Theta_check = Theta + Theta_steps*Theta_conversion
-				Z_check = Z + Z_steps*Z_conversion
+				R_check = R + R_steps*self.MM_PER_STEP_DR
+				Theta_check = Theta + Theta_steps*self.RADS_PER_STEP_DT
+				Z_check = Z + Z_steps*self.MM_PER_STEP_DZ
 				[check_x, check_y, check_z] = cf.cyl_to_xyz(R_check,
 					Theta_check, Z_check)
 
-				self.update_canvas(scale_factor, [ideal_x, ideal_y, ideal_z], 
-					[check_x, check_y, check_z], ideal_color, step_color,
-					clear_canvas)
+				self.update_canvas([ideal_x, ideal_y, ideal_z], [check_x,
+					check_y, check_z], ideal_color, step_color, clear_canvas)
 				clear_canvas = False
 
 				# Update position to reflect steps taken and encode it properly
@@ -415,9 +380,11 @@ class motorsUI(tk.Tk):
 		self.enable_screen()
 
 
-	# Consider removing entirely from new UI/program
-	def update_canvas(self, scale_factor, ideal_pos, step_pos, ideal_color,
+	def update_canvas(self, ideal_pos, step_pos, ideal_color,
 		step_color, clear_canvas):
+		# Apply scale factor to transform pixels to mm
+		scale_factor = 10
+
 		# Clear the previous trajectory from the map when starting a new path
 		# and redraw the map (with built-in scale eliminated)
 		if clear_canvas:
@@ -434,7 +401,7 @@ class motorsUI(tk.Tk):
 			self.canvas.create_rectangle(0,0,self.canvas.winfo_width(),
 				self.blank_rect_width,outline=self.white,fill=self.white)
 
-		# Create new point by moving according to the ideal dx, dy, dz
+		# Create new point by moving according to dx, dy, dz
 		new_x = scale_factor*ideal_pos[0]
 		new_y = scale_factor*ideal_pos[1]
 		new_z = scale_factor*ideal_pos[2]
@@ -458,7 +425,6 @@ class motorsUI(tk.Tk):
 		return False
 
 
-	# will need changing upon new UI/program
 	def acquire_target_pos(self):
 		# Handle the empty entry case (empty = 0)
 		try: 
@@ -468,6 +434,7 @@ class motorsUI(tk.Tk):
 				x = 0
 			else:
 				self.X_dirname.delete(0,END)
+				self.enable_screen()
 				raise ValueError('Target X Coordinate must be a real number.')
 		try: 
 			y = float(self.Y_dirname.get())
@@ -476,6 +443,7 @@ class motorsUI(tk.Tk):
 				y = 0
 			else:
 				self.Y_dirname.delete(0,END)
+				self.enable_screen()
 				raise ValueError('Target Y Coordinate must be a real number.')
 		try: 
 			z = float(self.Z_dirname.get())
@@ -484,6 +452,7 @@ class motorsUI(tk.Tk):
 				z = 0
 			else:
 				self.Z_dirname.delete(0,END)
+				self.enable_screen()
 				raise ValueError('Target Z Coordinate must be a real number.')
 
 		# Print selected target in mm to the terminal for user validation
@@ -493,9 +462,7 @@ class motorsUI(tk.Tk):
 		return [x, y, z]
 
 
-	def exit_program(self, serial_port):
-		serial_port.write(b"QUIT")
-		time.sleep(0.1)
+	def exit_program(self):
 		self.destroy()
 
 
@@ -511,7 +478,7 @@ class motorsUI(tk.Tk):
 		self.b_forward.config(state=NORMAL)
 		self.b_backward.config(state=NORMAL)
 		self.go_button.config(state=NORMAL)
-		self.speed_slider.config(state=NORMAL)
+		self.step_slider.config(state=NORMAL)
 		self.radio_xyz.config(state=NORMAL)
 		self.radio_polar.config(state=NORMAL)
 
@@ -523,7 +490,7 @@ class motorsUI(tk.Tk):
 		self.b_forward.config(state=DISABLED)
 		self.b_backward.config(state=DISABLED)
 		self.go_button.config(state=DISABLED)
-		self.speed_slider.config(state=DISABLED)
+		self.step_slider.config(state=DISABLED)
 		self.radio_xyz.config(state=DISABLED)
 		self.radio_polar.config(state=DISABLED)
 
