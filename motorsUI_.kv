@@ -4,7 +4,8 @@
 # Created on Wed Nov  1 10:37:35 2017
 # @author: mac
 
-#:kivy 1.10.0
+#: kivy 1.10.0
+#: import sm kivy.uix.screenmanager
 
 <Widget>:
     font_name: "Meteora"
@@ -79,7 +80,7 @@
         # Forward Button
         Button:
             id: forward_button
-            on_release: root.forward()
+            on_release: root.move_directionally(0,10,0)
             background_normal: ''
             background_color: 0,0,0,0
             canvas:
@@ -91,7 +92,7 @@
         # Up Button
         Button:
             id: up_button
-            on_release: root.up()
+            on_release: root.move_directionally(0,0,10)
             background_normal: ''
             background_color: 0,0,0,0
             canvas:
@@ -114,7 +115,7 @@
         # Left Button
         Button:
             id: left_button
-            on_release: root.left()
+            on_release: root.move_directionally(-10,0,0)
             background_normal: ''
             background_color: 0,0,0,0
             canvas:
@@ -129,7 +130,7 @@
         # Right Button
         Button:
             id: right_button
-            on_release: root.right()
+            on_release: root.move_directionally(10,0,0)
             background_normal: ''
             background_color: 0,0,0,0
             canvas:
@@ -141,7 +142,7 @@
         # Down Button
         Button:
             id: down_button
-            on_release: root.down()
+            on_release: root.move_directionally(0,0,-10)
             background_normal: ''
             background_color: 0,0,0,0
             canvas:
@@ -165,7 +166,7 @@
         # Backward Button
         Button:
             id: backward_button
-            on_release: root.backward()
+            on_release: root.move_directionally(0,-10,0)
             background_normal: ''
             background_color: 0,0,0,0
             canvas:
@@ -238,7 +239,7 @@
     spacing: "10dp"
 
 
-<MainScreen@Screen>:
+<MainScreen>:
     name: "Main"
     BoxLayout:
         orientation: "vertical"
@@ -302,14 +303,14 @@
                                             orientation: "vertical"
                                             Button:
                                                 text: "Up"
-                                                on_press: 
-                                                    root.parent.velocity += 1
-                                                    root.ids.velocity_label.text = root.parent.vel_str + " mm/sec"
+                                                on_release: 
+                                                    app._mvs.velocity += 1
+                                                    root.ids.velocity_label.text = app._mvs.vel_str + " mm/sec"
                                             Button:
                                                 text: "Down"
-                                                on_press:
-                                                    root.parent.velocity -= 1
-                                                    root.ids.velocity_label.text = root.parent.vel_str + " mm/sec"
+                                                on_release:
+                                                    app._mvs.velocity -= 1
+                                                    root.ids.velocity_label.text = app._mvs.vel_str + " mm/sec"
                                         Label:
                                             id: velocity_label
                                             font_size: 15
@@ -364,6 +365,7 @@
                                 Button:
                                     text: "Queue Target"  
                                     size_hint: 1,15/16
+                                    on_release: root.queueTarget()
                     
                     # Lower (Right) Layout
                     BoxLayout:
@@ -392,17 +394,20 @@
                                             anchor_x: "right"
                                             anchor_y: "top"
                                             TargetTextBox:
+                                                id: x_target
                                                 hint_text: "X"
                                                 size_hint: 0.7,0.6
                                         AnchorLayout:
                                             anchor_y: "top"
                                             TargetTextBox:
+                                                id: y_target
                                                 hint_text: "Y"
                                                 size_hint: 0.7,0.6
                                         AnchorLayout:
                                             anchor_x: "left"
                                             anchor_y: "top"
                                             TargetTextBox:
+                                                id: z_target
                                                 hint_text: "Z"
                                                 size_hint: 0.7,0.6
                                       
@@ -442,18 +447,21 @@
                                     id: import_button
                                     text: "Import"
                                     on_release:
+                                        root.parent.transition = sm.SlideTransition()
                                         root.parent.transition.direction = 'up'
                                         root.parent.current = 'Import'
                                 MenuButton:
                                     id: save_button
                                     text: "Save"
                                     on_release:
+                                        root.parent.transition = sm.SlideTransition()
                                         root.parent.transition.direction = 'right' 
                                         root.parent.current = 'Save'
                                 MenuButton:
                                     id: quit_button
                                     text: "Quit"
                                     on_release:
+                                        root.parent.transition = sm.SlideTransition()
                                         root.parent.transition.direction = 'left' 
                                         root.parent.current = 'Quit'
 
@@ -470,13 +478,13 @@
             Button:
                 text: "No"
                 on_release: 
-                    print(app.root)
-                    print(app.root.vel_str)
+                    root.parent.transition = sm.SlideTransition()
                     root.parent.transition.direction = 'right'
                     root.parent.current = 'Main'
             Button:
                 text: "Yes"
-                on_release: app.stop()
+                on_release: 
+                    app.stop()
 
 
 <SaveScreen@Screen>:
@@ -502,11 +510,13 @@
             Button:
                 text: "Cancel"
                 on_release: 
+                    root.parent.transition = sm.SlideTransition()
                     root.parent.transition.direction = 'left'
                     root.parent.current = 'Main'
             Button:
                 text: "Save"
                 on_release:
+                    root.parent.transition = sm.SlideTransition()
                     root.parent.transition.direction = 'left'
                     root.parent.current = 'Main'
 
@@ -534,11 +544,13 @@
             Button:
                 text: "Cancel"
                 on_release: 
+                    root.parent.transition = sm.SlideTransition()
                     root.parent.transition.direction = 'down'
                     root.parent.current = 'Main'
             Button:
                 text: "Import"
-                on_release: 
+                on_release:
+                    root.parent.transition = sm.SlideTransition() 
                     root.parent.transition.direction = 'down'
                     root.parent.current = 'Main'
 
@@ -555,16 +567,18 @@
         Button:
             text: "Begin"
             on_release:
-                root.parent.transition = FallOutTransition()
+                root.parent.transition = sm.FallOutTransition()
+                root.parent.transition.duration = 0.5
                 root.parent.current = 'Main'
 
         Button:
             text: "Exit"
             on_release:
+                app._mvs._guiOpen = False
                 app.stop()
 
 
-<MVSS>:
+<GUI>:
     polar_map: root.ids.main_screen.ids.petri_map
     camera: root.ids.main_screen.ids.video_feed
     WelcomeScreen:

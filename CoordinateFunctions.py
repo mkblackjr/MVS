@@ -122,23 +122,23 @@ def check_path_for_x_wall(x, y, targetX, targetY):
 		return False
 
 
-def update_target(target, y, z, ideal_x, ideal_y, travel_mode, direction):
+def update_target(target, y, z, ideal_x, ideal_y, travel_mode, directionalFlag):
 	# Only test for avoiding positive x axis if XYZ mode or directional move
-	if((not travel_mode) | (direction!='G')):
+	if not travel_mode:
 		# Imaginary barrier at Theta = 0/2pi - go around it by setting waypoints
 		# which simply precede the final target in the target array
 		avoid_positive_x_axis = check_path_for_x_wall(ideal_x, ideal_y,
 			target[0][0], target[0][1])
 		if(avoid_positive_x_axis):
-			if(direction=='G'):
+			if(directionalFlag):
+				# 3 legs at 90 angle: to y axis, to (0,y_target), to target
+				target = np.array([[-1,y,z+(target[0][2]-z)/3],
+					[-1,target[0][1],z+2*(target[0][2]-z)/3],[target[0][0],
+					target[0][1],target[0][2]]])
+			else:
 				# 2 legs to/from (-1,0): (-1,0) -> to target
 				target = np.array([[-1,0,z+(target[0][2]-z)/2],
 					[target[0][0],target[0][1],target[0][2]]])
-			else:
-				# 3 legs at 90 angle: to y axis, to (0,y_target), to target
-				target = np.array([[-1,y,z+(target[0][2]-z)/3],
-					[0,target[0][1],z+2*(target[0][2]-z)/3],[target[0][0],
-					target[0][1],target[0][2]]])
 
 	return target
 
