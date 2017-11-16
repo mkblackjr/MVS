@@ -405,7 +405,8 @@ if __name__=="__main__":
     try:
         com_port = "/dev/cu.usbmodem1411"
         arduino = serial.Serial(com_port, 9600)
-        time.sleep(3)
+        time.sleep(3)333
+        33
     except:
         com_port = None
         arduino = None
