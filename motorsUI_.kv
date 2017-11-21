@@ -338,11 +338,15 @@
                                         text: "XYZ"
                                         group: "Mode"
                                         allow_no_selection: False
+                                        on_release:
+                                            app._mvs._travelMode = 0
                                     ToggleButton:
                                         text: "Radial"
                                         group: "Mode"
                                         state: "down"
                                         allow_no_selection: False
+                                        on_release:
+                                            app._mvs._travelMode = 1
                             
                         # Motion Execution Frame
                         FrameOutline:
@@ -512,7 +516,9 @@
             text: "Please specify the filepath."
         
         FileChooserListView:
-            on_selection: filepath.text = self.selection and self.selection[0] or ''
+            path: '~/Documents/GithubRepositories/MVS/'
+            on_selection: 
+                filepath.text = self.selection and self.selection[0] or ''
         
         TextInput:
             id: filepath
@@ -533,6 +539,7 @@
                     root.parent.transition = sm.SlideTransition()
                     root.parent.transition.direction = 'left'
                     root.parent.current = 'Main'
+                    app._save(filepath.text)
 
 
 <ImportScreen@Screen>:
@@ -546,7 +553,9 @@
             text: "Please select the file containing the new set of trajectories."
         
         FileChooserListView:
-            on_selection: filepath.text = self.selection and self.selection[0] or ''
+            path: '~/Documents/GithubRepositories/MVS/'
+            on_selection: 
+                filepath.text = self.selection and self.selection[0] or ''
 
         TextInput:
             id: filepath
@@ -567,6 +576,7 @@
                     root.parent.transition = sm.SlideTransition() 
                     root.parent.transition.direction = 'down'
                     root.parent.current = 'Main'
+                    app._import(filepath.text)
 
 
 <WelcomeScreen@Screen>:

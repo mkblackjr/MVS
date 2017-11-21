@@ -17,13 +17,14 @@ import serial
 import queue
 import threading
 import time
+import csv
 from math import pi,sqrt
 from kivy.uix.screenmanager import ScreenManager, Screen
 from kivy.app import App
 from kivy.properties import NumericProperty, ReferenceListProperty,\
     ObjectProperty, StringProperty, BooleanProperty
 from kivy.graphics import Color,Ellipse,Rectangle
-from kivy.core.image import Image
+from kivy.uix.image import Image
 
 ###############################################################################
 ############################### Program Settings ##############################
@@ -91,7 +92,7 @@ class MVSS():
     _pos = [_x,_y,_z]
     _idealPos = _pos
     _vel = 1
-    _target = [0,0,0]
+    _currentTarget = [0,0,0]
     _travelMode = None
    
     # Class Objects
@@ -136,7 +137,9 @@ class MVSS():
         print(self._guiOpen)
         while self._guiOpen:
             if not targetQueue.empty():
-                self._currentTarget = targetQueue.get()
+                target = targetQueue.get()
+                for i in range(len(target)):
+                    self._currentTarget[i] = float(target[i])
                 self.update_data()
                 self.move(self._currentTarget)
         # self._serialPort.write(b'QUIT')
@@ -162,15 +165,16 @@ class MVSS():
                     Ellipse(pos = position,size=(2,2))
         else:
             with petri_id.canvas:
-                    Color(1,1,1)
-                    Ellipse(pos=(petri_id.x + petri_id.width/2 - 
-                        5*petri_id.height/12,petri_id.y + petri_id.height/12),
-                        size=(petri_id.height*5/6,petri_id.height*5/6))
-            with petri_id:
-                Image(source="polarGraph.png",size=(petri_id.height*5/6,
-                    petri_id.height*5/6),center=(petri_id.x + petri_id.width/2,
-                    petri_id.y + petri_id.height/2))
-
+                Color(1,1,1)
+                Ellipse(pos=(petri_id.x + petri_id.width/2 - 
+                    5*petri_id.height/12,petri_id.y + petri_id.height/12),
+                    size=(petri_id.height*5/6,petri_id.height*5/6))
+            im = Image(source="polarGraph.png",size=(petri_id.height*5/6,
+                petri_id.height*5/6),center=(petri_id.x + petri_id.width/2,
+                petri_id.y + petri_id.height/2))
+            petri_id.add_widget(im)
+            
+            # with petri_id:
 
     def move(self,target):
 
@@ -420,6 +424,7 @@ class MainScreen(Screen):
         box = self.app.root.ids.main_screen.ids
         target = [box.x_target.text,box.y_target.text,box.z_target.text]
         for i in range(len(target)):
+            print(type(target[i]))
             if target[i] == "":
                 target[i] = 0.0
         self.app.commandQueue.put(target)
@@ -459,6 +464,22 @@ class MotorsUI_App(App):
     def on_stop(self):
         # Arduino code homes motors at shutdown
         self._mvs._guiOpen = False
+
+    def _save(self,filename):
+        mod = self._gui.ids.main_screen.ids.trajectory_log
+        with open(filename,'wb') as f:
+            w = csv.writer(f,delimiter=',')
+            for line in mod.text:
+                w.writerow(line)
+
+    def _import(self,file):
+        with open(file,'r') as f:
+            r = csv.reader(f)
+            for row in r:
+                self.commandQueue.put(row)
+
+
+
 
 ###############################################################################
 ################################ Main Execution ###############################
