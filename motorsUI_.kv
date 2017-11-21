@@ -44,6 +44,7 @@
             size: root.height*5/6,root.height*5/6
             pos: root.x + root.width/2 - 5*root.height/12,root.y + root.height/12
     Image:
+        id: polar_map
         source:"polarGraph.png"
         size: root.height*5/6,root.height*5/6
         center: root.x + root.width/2,root.y + root.height/2
@@ -64,7 +65,7 @@
     size_hint: 3/4,1/2
     center_x: root.parent.x + root.parent.width/2
     center_y: root.parent.y + root.parent.height
-
+    on_parent: root.focus = True
 
 
 <DirectionalArrowButtons>:
@@ -81,7 +82,7 @@
         # Forward Button
         Button:
             id: forward_button
-            on_release: root.move_directionally(0,10,0)
+            on_release: root.move_directionally(0,root.length,0)
             background_normal: ''
             background_color: 0,0,0,0
             canvas:
@@ -93,7 +94,7 @@
         # Up Button
         Button:
             id: up_button
-            on_release: root.move_directionally(0,0,10)
+            on_release: root.move_directionally(0,0,root.length)
             background_normal: ''
             background_color: 0,0,0,0
             canvas:
@@ -116,7 +117,7 @@
         # Left Button
         Button:
             id: left_button
-            on_release: root.move_directionally(-10,0,0)
+            on_release: root.move_directionally(-1*root.length,0,0)
             background_normal: ''
             background_color: 0,0,0,0
             canvas:
@@ -131,7 +132,7 @@
         # Right Button
         Button:
             id: right_button
-            on_release: root.move_directionally(10,0,0)
+            on_release: root.move_directionally(root.length,0,0)
             background_normal: ''
             background_color: 0,0,0,0
             canvas:
@@ -143,7 +144,7 @@
         # Down Button
         Button:
             id: down_button
-            on_release: root.move_directionally(0,0,-10)
+            on_release: root.move_directionally(0,0,-1*root.length)
             background_normal: ''
             background_color: 0,0,0,0
             canvas:
@@ -167,7 +168,7 @@
         # Backward Button
         Button:
             id: backward_button
-            on_release: root.move_directionally(0,-10,0)
+            on_release: root.move_directionally(0,-1*root.length,0)
             background_normal: ''
             background_color: 0,0,0,0
             canvas:
@@ -316,7 +317,7 @@
                                             id: velocity_label
                                             font_size: 15
                                             font_name: "Arial"
-                                            text: "0 mm/sec"
+                                            text: "1 mm/sec"
 
                             AnchorLayout:
                                 size_hint: 1,0.75
@@ -389,6 +390,7 @@
                                     Label:
                                         font_size: 15
                                         text: "Current Target"
+                                        size_hint: 1,1/2
                                     
                                     BoxLayout:
                                         AnchorLayout:
@@ -396,12 +398,17 @@
                                             anchor_y: "top"
                                             TargetTextBox:
                                                 id: x_target
+                                                font_name: "Arial"
+                                                font_size: 13
                                                 hint_text: "X"
                                                 size_hint: 0.7,0.6
                                         AnchorLayout:
                                             anchor_y: "top"
                                             TargetTextBox:
                                                 id: y_target
+                                                font_name: "Arial"
+                                                font_size: 13
+                                                halign: "center"
                                                 hint_text: "Y"
                                                 size_hint: 0.7,0.6
                                         AnchorLayout:
@@ -409,6 +416,8 @@
                                             anchor_y: "top"
                                             TargetTextBox:
                                                 id: z_target
+                                                font_name: "Arial"
+                                                font_size: 13
                                                 hint_text: "Z"
                                                 size_hint: 0.7,0.6
                                       
@@ -423,12 +432,16 @@
                                     AnchorLayout:
                                         anchor_x: "center"
                                         anchor_y: "center"
-                                        canvas:
-                                            Color: 
-                                                rgba: 1,1,1,1
-                                            Rectangle:
-                                                size: self.size
-                                                pos: self.pos
+                                        TextInput:
+                                            id: trajectory_log
+                                            font_name: "Arial" 
+                                            text: ""
+                                        # canvas:
+                                        #     Color: 
+                                        #         rgba: 1,1,1,1
+                                        #     Rectangle:
+                                        #         size: self.size
+                                        #         pos: self.pos
                                         
                                                            
                                             

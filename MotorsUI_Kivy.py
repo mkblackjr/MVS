@@ -12,15 +12,18 @@ Created on Fri Oct 27 11:45:14 2017
 import CoordinateFunctions as cf
 import SerialFunctions as sf
 import MoveFunctions as move
+import numpy as np
 import serial
 import queue
 import threading
 import time
-from math import pi
+from math import pi,sqrt
 from kivy.uix.screenmanager import ScreenManager, Screen
 from kivy.app import App
 from kivy.properties import NumericProperty, ReferenceListProperty,\
     ObjectProperty, StringProperty, BooleanProperty
+from kivy.graphics import Color,Ellipse,Rectangle
+from kivy.core.image import Image
 
 ###############################################################################
 ############################### Program Settings ##############################
@@ -40,6 +43,17 @@ motor_step_correction_factor = 510/4096
 MM_PER_STEP_DZ = 0.0062*motor_step_correction_factor
 RADS_PER_STEP_DT = rads_per_step_motor*gear_ratio
 MM_PER_STEP_DR = gear_diameter*pi/steps_per_rev_motor
+execution_time_per_step = 0.0010664
+
+# Path Planning Parameters
+d_threshold = 0.05
+resolution = 100
+# scale_factor = 2
+# step_increment = 10
+# resolution = 100
+# exact_color = "#ff0000" # Red
+# step_color = "#0000cd" # Medium Blue
+end = "\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n"
 
 ###############################################################################
 ################################ Window Settings ##############################
@@ -47,6 +61,11 @@ MM_PER_STEP_DR = gear_diameter*pi/steps_per_rev_motor
 
 from kivy.config import Config
 from kivy.core.text import LabelBase
+from kivy.config import Config
+
+# Config.read('/Users/mac/.kivy/config.ini')
+# Config.set('input','mouse','mouse,multitouch_on_demand')
+# Config.write()
 
 LabelBase.register(name="Meteora",fn_regular="Meteora.ttf")
 LabelBase.register(name="Gtek",fn_regular="Gtek.ttf")
@@ -71,7 +90,7 @@ class MVSS():
     _z = 0
     _pos = [_x,_y,_z]
     _idealPos = _pos
-    _vel = 0
+    _vel = 1
     _target = [0,0,0]
     _travelMode = None
    
@@ -97,9 +116,7 @@ class MVSS():
 
     def open_serial_port(self):
 
-        if self._serialPort == None:
-            self._connected = False
-        else:
+        if self._serialPort != None:
             # Establish Connection
             while not self._connected:
                 self._serialPort.write(b'We are live.\n')
@@ -110,21 +127,52 @@ class MVSS():
                 if True:
                     self._connected = True
 
+        return True
         return self._connected
 
     def run(self,targetQueue,status):
         self._guiOpen = status
         # While GUI is open
+        print(self._guiOpen)
         while self._guiOpen:
             if not targetQueue.empty():
                 self._currentTarget = targetQueue.get()
-                print(self._currentTarget)
-                time.sleep(10)
-                # self.move(self._currentTarget)
-        self._serialPort.write(b'QUIT')
-        # self.close()
+                self.update_data()
+                self.move(self._currentTarget)
+        # self._serialPort.write(b'QUIT')
+        self.close()
 
-    def move(self,targets):
+    def update_data(self):
+        id_list = self._app.root.ids.main_screen.ids
+
+        # Target Tracking
+        id_list.trajectory_log.text += (str(self._currentTarget[0:3]) + "\n")
+        id_list.x_target.text = str(self._currentTarget[0])
+        # id_list.x_target.padding_x = id_list.x_target.width / 2
+        id_list.y_target.text = str(self._currentTarget[1])
+        # id_list.y_target.padding_x = id_list.y_target.width / 2
+        id_list.z_target.text = str(self._currentTarget[2])
+        # id_list.z_target.padding_x = id_list.z_target.width / 2
+
+    def update_petri_canvas(self,position,clear):
+        petri_id = self._app.root.ids.main_screen.ids.petri_map
+        if not clear:
+            with petri_id.canvas:
+                    Color(0.4,0.65,1)
+                    Ellipse(pos = position,size=(2,2))
+        else:
+            with petri_id.canvas:
+                    Color(1,1,1)
+                    Ellipse(pos=(petri_id.x + petri_id.width/2 - 
+                        5*petri_id.height/12,petri_id.y + petri_id.height/12),
+                        size=(petri_id.height*5/6,petri_id.height*5/6))
+            with petri_id:
+                Image(source="polarGraph.png",size=(petri_id.height*5/6,
+                    petri_id.height*5/6),center=(petri_id.x + petri_id.width/2,
+                    petri_id.y + petri_id.height/2))
+
+
+    def move(self,target):
 
         # Initializations
         remainderR = 0; remainderTheta = 0; remainderZ = 0
@@ -143,7 +191,7 @@ class MVSS():
         z_ideal = self.ideal_position[2]
 
         # Determine the final target
-        target = [np.array(targets.get())]
+        target = [np.array(target)]
         if len(target) == 4:
             directionalFlag = 1
             travelMode = 0
@@ -153,8 +201,8 @@ class MVSS():
             ", " + str(target[0][2]) + ")")
 
         # Compute dR, dTheta for case of polar travel mode
-        (dR_polar,dTheta_polar) = tuple(np.subtract(cf.xyz_to_cyl(target[0][0],
-                                  target[0][1],target[0][2]),(R,Theta,0)))
+        (dR_polar,dTheta_polar,_) = tuple(np.subtract(cf.xyz_to_cyl(target[0][0],
+            target[0][1],target[0][2]),[R,Theta,0]))
 
         # Update target to incorporate wall at Theta = 0/2pi
         target = cf.update_target(target, y, z, x_ideal, y_ideal,
@@ -186,12 +234,11 @@ class MVSS():
                     dz = (z_target - z)/res
 
                 # Check if target has been reached
-                d = math.sqrt((dx*res)**2 + (dy*res)**2 + (dz*res)**2)
+                d = sqrt((dx*res)**2 + (dy*res)**2 + (dz*res)**2)
                 if (d < d_threshold):
                     targetReached = True
                     # Notify user when target has been reached
-                    print("\nTarget reached. Input another command, or " + \
-                        "press 'Exit' to close the window.\n")
+                    print("\nTarget reached.\n")
                     skip = True
                     continue
 
@@ -206,7 +253,7 @@ class MVSS():
 
                 # Calculate dR, dTheta without using a rotation matrix
                 [dR, dTheta] = cf.nonMatrix_calc_dR_dTheta(x, y, z, dx, dy, dz, res)
-                if travel_mode:
+                if travelMode:
                     dR = dR_polar/resolution
                     dTheta = dTheta_polar/resolution
 
@@ -225,21 +272,24 @@ class MVSS():
                 wait_dR = abs(R_steps*MM_PER_STEP_DR)
                 wait_dTheta = abs(Theta_steps*RADS_PER_STEP_DT)
                 wait_dZ = abs(Z_steps*MM_PER_STEP_DZ)
-                ds = math.sqrt(wait_dR**2+(R*wait_dTheta)**2+wait_dZ**2)
+                ds = sqrt(wait_dR**2+(R*wait_dTheta)**2+wait_dZ**2)
                 wait = 1E3*(ds/vel - execution_time_per_step*total_steps)
                 print("Wait time is: " + str(wait))
                 if(wait<0):
                     wait = 0
 
                 # Wait for the go ahead signal from arduino
-                sf.wait_for_arduino(open_serial_port)
+                # sf.wait_for_arduino(open_serial_port)
 
                 # # Write computed integer steps to serial port in encoded form
                 # # 'R___T___Z___'
+                print(R_steps)
+                print(Theta_steps)
+                print(Z_steps)
                 toWrite = cf.encode_step_command(R_steps, Theta_steps,
                     Z_steps, int(wait))
                 print(toWrite)
-                open_serial_port.write(toWrite)
+                # open_serial_port.write(toWrite)
 
                 # Compute ideal movement to check accuracy 
                 # of trajectory following algorithm
@@ -261,9 +311,14 @@ class MVSS():
                     Theta_actual, Z_actual)
 
                 # Draw the points on the canvas
-                self.update_canvas(scale_factor, [x_ideal, y_ideal, z_ideal], 
-                    [x_actual, y_actual, z_actual], ideal_color, step_color,
-                    clearCanvas)
+                origin = [self._app.root.ids.main_screen.ids.petri_map.center_x,
+                          self._app.root.ids.main_screen.ids.petri_map.center_y]
+                actual_point = [x+y for x,y in zip(origin,[x_actual,y_actual])]
+                print(actual_point)
+                self.update_petri_canvas(actual_point,clearCanvas)
+                # self.update_canvas(scale_factor, [x_ideal, y_ideal, z_ideal], 
+                #     [x_actual, y_actual, z_actual], ideal_color, step_color,
+                #     clearCanvas)
                 clearCanvas = False
 
                 # Update position to reflect steps taken and encode it properly
@@ -282,7 +337,8 @@ class MVSS():
         time.sleep(1)
 
     def close(self):
-        self._serialPort.close()
+        # self._serialPort.close()
+        pass
         
     @property
     def position(self):
@@ -309,8 +365,8 @@ class MVSS():
         return str(self._vel)
     @velocity.setter
     def velocity(self,vel):
-        if vel < 0:
-            vel = 0
+        if vel < 1:
+            vel = 1
         elif vel > 10:
             vel = 10
         self._vel = vel
@@ -343,10 +399,16 @@ class DirectionalArrowButtons(AnchorLayout):
     def __init__(self,**kwargs):
         super().__init__(**kwargs)
         self.app = App.get_running_app()
+        self._length = 10
 
     def move_directionally(self,x=0,y=0,z=0):
-        newTarget = self.app.commandQueue.queue[-1][0:3] + [x,y,z]
-        self.app.commandQueue.put(newTarget.append(True))
+        newTarget = [x+y for x,y in zip(self.app._mvs._currentTarget,[x,y,z])]
+        newTarget.append(True)
+        self.app.commandQueue.put(newTarget)
+
+    @property
+    def length(self):
+        return self._length
 
 
 class MainScreen(Screen):
@@ -375,6 +437,7 @@ class GUI(ScreenManager):
 class MotorsUI_App(App):
     title = "MVS"
     commandQueue = queue.Queue()
+    commandQueue.put([0,0,0])
 
     def __init__(self,port=None,**kwargs):
         # super(testApp,self).__init__(**kwargs)
@@ -405,14 +468,15 @@ if __name__=="__main__":
     try:
         com_port = "/dev/cu.usbmodem1411"
         arduino = serial.Serial(com_port, 9600)
-        time.sleep(3)333
-        33
+        time.sleep(3)
     except:
         com_port = None
         arduino = None
     print(arduino)
     MotorsUI_App(port=arduino).run()
     # testApp().run()
+
+    print(end)
 
 
 

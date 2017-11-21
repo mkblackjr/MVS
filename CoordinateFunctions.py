@@ -54,7 +54,7 @@ def calculate_steps(R_steps, T_steps, Z_steps, rR, rT, rZ):
 	rT = update_remainder(rT)
 	rZ = update_remainder(rZ)
 
-	return [R_steps, T_steps, -1*Z_steps, rR, rT, rZ]
+	return [R_steps, T_steps, Z_steps, rR, rT, rZ]
 
 
 def update_remainder(remainder):
