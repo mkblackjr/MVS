@@ -60,7 +60,6 @@ end = "\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n"
 ################################ Window Settings ##############################
 ###############################################################################
 
-from kivy.config import Config
 from kivy.core.text import LabelBase
 from kivy.config import Config
 
