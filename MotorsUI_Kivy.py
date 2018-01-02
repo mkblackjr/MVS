@@ -18,6 +18,8 @@ import queue
 import threading
 import time
 import csv
+import image_server
+from camera import Camera
 from math import pi,sqrt
 from kivy.uix.screenmanager import ScreenManager, Screen
 from kivy.app import App
@@ -25,6 +27,7 @@ from kivy.properties import NumericProperty, ReferenceListProperty,\
     ObjectProperty, StringProperty, BooleanProperty
 from kivy.graphics import Color,Ellipse,Rectangle
 from kivy.uix.image import Image
+
 
 ###############################################################################
 ############################### Program Settings ##############################
@@ -70,20 +73,36 @@ from kivy.config import Config
 LabelBase.register(name="Meteora",fn_regular="Meteora.ttf")
 LabelBase.register(name="Gtek",fn_regular="Gtek.ttf")
 LabelBase.register(name="Zian",fn_regular="Zian.ttf")
+LabelBase.register(name="Carrinady",fn_regular="Carrinady.ttf")
+LabelBase.register(name="Nebulous",fn_regular="NebulousContent.otf")
+LabelBase.register(name="Subzero",fn_regular="SubZER0.ttf")
+LabelBase.register(name="EarthOrbiter",fn_regular="earthorbiterbold.ttf")
+LabelBase.register(name="ElectromagneticLungs",fn_regular="ElectromagneticLungs.otf")
+LabelBase.register(name="Xolonium",fn_regular="Xolonium-Bold.otf")
 
+Config.set('kivy', 'exit_on_escape', '0')
 Config.set('graphics', 'width', '900')
 Config.set('graphics', 'height', '600')
-# Config.set('graphics','borderless',1)
 Config.set('graphics','resizable',0)
 Config.set('graphics','position','custom')
 Config.set('graphics','left',250)
 Config.set('graphics','top',10)
 
+lock = threading.Lock()
+
 ###############################################################################
-################################# MVSS Manager ################################
+################################# MVS Manager ################################
 ###############################################################################
 
-class MVSS():
+''' Functionality to Debug:
+
+- Cannot change target textbox values
+- XYZ Travel mode non-functional
+- open_serial_port() needs debugging
+
+'''
+
+class MVS():
     # Class Variables
     _x = 0
     _y = 0
@@ -95,10 +114,10 @@ class MVSS():
     _travelMode = None
    
     # Class Objects
-    _polarMap = ObjectProperty(None)
+    _polarMap  = ObjectProperty(None)
     _videoFeed = ObjectProperty(None)
 
-    def __init__(self,port=None,**kwargs):
+    def __init__(self,port=None,lock=None,**kwargs):
         super().__init__(**kwargs)
         self._serialPort = port
         self._app = None
@@ -111,6 +130,8 @@ class MVSS():
         self._save_ids = self._app.root.ids.save_screen.ids
         self._import_ids = self._app.root.ids.import_screen.ids
         self._quit_ids = self._app.root.ids.quit_screen.ids
+
+
 
         return self.open_serial_port()
 
@@ -133,10 +154,13 @@ class MVSS():
     def run(self,targetQueue,status):
         self._guiOpen = status
         # While GUI is open
-        print(self._guiOpen)
         while self._guiOpen:
-            if not targetQueue.empty():
-                target = targetQueue.get()
+            with lock:
+                if not targetQueue.empty():
+                    target = targetQueue.get()
+                    go = True
+                else: go = False
+            if go:
                 for i in range(len(target)):
                     self._currentTarget[i] = float(target[i])
                 self.update_data()
@@ -200,8 +224,8 @@ class MVSS():
             travelMode = 0
         else: directionalFlag = 0
 
-        print("Target = (" + str(target[0][0]) + ", " + str(target[0][1]) + 
-            ", " + str(target[0][2]) + ")")
+        # print("Target = (" + str(target[0][0]) + ", " + str(target[0][1]) + 
+        #     ", " + str(target[0][2]) + ")")
 
         # Compute dR, dTheta for case of polar travel mode
         (dR_polar,dTheta_polar,_) = tuple(np.subtract(cf.xyz_to_cyl(target[0][0],
@@ -223,8 +247,8 @@ class MVSS():
             # Continue to compute dR, dTheta, dZ until target is "reached"
             while not (targetReached | skip):
 
-                print("This is iteration " + str(resolution - res))
-                print("x = " + str(x) + " y = " + str(y) + " z = " + str(z))
+                # print("This is iteration " + str(resolution - res))
+                # print("x = " + str(x) + " y = " + str(y) + " z = " + str(z))
                 
                 if res == 0:
                     dx = (x_target - x)
@@ -318,7 +342,7 @@ class MVSS():
                           self._app.root.ids.main_screen.ids.petri_map.center_y]
                 actual_point = [x+y for x,y in zip(origin,[x_actual,y_actual])]
                 print(actual_point)
-                self.update_petri_canvas(actual_point,clearCanvas)
+                self.update_petri_canvas(10*actual_point,clearCanvas)
                 # self.update_canvas(scale_factor, [x_ideal, y_ideal, z_ideal], 
                 #     [x_actual, y_actual, z_actual], ideal_color, step_color,
                 #     clearCanvas)
@@ -399,7 +423,7 @@ class PetriMap(Widget):
 
 
 class DirectionalArrowButtons(AnchorLayout):
-    def __init__(self,**kwargs):
+    def __init__(self,lock=None,**kwargs):
         super().__init__(**kwargs)
         self.app = App.get_running_app()
         self._length = 10
@@ -407,7 +431,8 @@ class DirectionalArrowButtons(AnchorLayout):
     def move_directionally(self,x=0,y=0,z=0):
         newTarget = [x+y for x,y in zip(self.app._mvs._currentTarget,[x,y,z])]
         newTarget.append(True)
-        self.app.commandQueue.put(newTarget)
+        with lock:
+            self.app.commandQueue.put(newTarget)
 
     @property
     def length(self):
@@ -423,10 +448,10 @@ class MainScreen(Screen):
         box = self.app.root.ids.main_screen.ids
         target = [box.x_target.text,box.y_target.text,box.z_target.text]
         for i in range(len(target)):
-            print(type(target[i]))
             if target[i] == "":
                 target[i] = 0.0
-        self.app.commandQueue.put(target)
+        with lock:
+            self.app.commandQueue.put(target)
         
 
 class GUI(ScreenManager):
@@ -450,32 +475,40 @@ class MotorsUI_App(App):
     
     def build(self):
         self._gui = GUI()
-        self._mvs = MVSS(self.serial_port)
+        self._mvs = MVS(self.serial_port)
 
         return self._gui
 
     def on_start(self):
         if self._mvs.start():
-            self._comThread = threading.Thread(name="ComThread",target=self._mvs.run,args=(self.commandQueue,True,))
-            self._comThread.start()
+            comThread = threading.Thread(name="ComThread",target=self._mvs.run,args=(self.commandQueue,True,))
+            comThread.start()
+            print("COM Thread Started")
+            
+            WSGI_thread = threading.Thread(name="WSGI_thread",target=image_server.serve)
+            WSGI_thread.daemon = True
+            WSGI_thread.start()
+
         # Arduino code ensures motors are homed at startup
+        else: print("Something went wrong during \"on_start\"")
     
     def on_stop(self):
         # Arduino code homes motors at shutdown
         self._mvs._guiOpen = False
 
     def _save(self,filename):
-        mod = self._gui.ids.main_screen.ids.trajectory_log
+        log = self._gui.ids.main_screen.ids.trajectory_log
         with open(filename,'wb') as f:
             w = csv.writer(f,delimiter=',')
-            for line in mod.text:
+            for line in log.text:
                 w.writerow(line)
 
     def _import(self,file):
         with open(file,'r') as f:
             r = csv.reader(f)
             for row in r:
-                self.commandQueue.put(row)
+                with lock:
+                    self.commandQueue.put(row)
 
 
 
@@ -492,8 +525,7 @@ if __name__=="__main__":
     except:
         com_port = None
         arduino = None
-    print(arduino)
-    MotorsUI_App(port=arduino).run()
+    MotorsUI_App(arduino).run()
     # testApp().run()
 
     print(end)
