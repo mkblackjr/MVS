@@ -85,7 +85,6 @@ def nonMatrix_calc_dR_dTheta(x, y, z, dx, dy, dz, res):
 	Theta2 = (Theta2 < 0)*2*math.pi + Theta2
 
 	dR = R2 - R1
-	print("dR = " + str(dR))
 	
 	# At (0,0,0) Theta = 0, but that isn't necessary for most trajectories
 	# that pass through origin, so allow Theta to remain constant as the 
@@ -94,7 +93,6 @@ def nonMatrix_calc_dR_dTheta(x, y, z, dx, dy, dz, res):
 		dTheta = 0
 	else: 
 		dTheta = Theta2 - Theta1
-	print("dTheta = " + str(dTheta))
 
 	return (dR, dTheta)
 

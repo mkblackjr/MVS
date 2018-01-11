@@ -9,7 +9,10 @@
 
 <Widget>:
     font_name: "Xolonium"
-    font_size: 25
+    font_size: "15dp"
+
+<Button>:
+    font_size: "10dp"
 
 <Background@BoxLayout>:
     # Background Color
@@ -24,7 +27,7 @@
 
 <VideoFeed>:
     AsyncImage:
-        source: 'http://localhost:3141/video_feed'
+        source: 'http://localhost:3141/current_image'
         size: root.width*5/6,root.width*5/6*(480/640)
         center: root.x + root.width/2,root.y + root.height/2
         resolution: (640, 480)
@@ -41,9 +44,8 @@
     #         size: root.height*5/6,root.height*5/6
     #         pos: root.x + root.width/2 - 5*root.height/12,root.y + root.height/12 
     Label:
-        font_size: "15dp"
         center_x: root.x + root.width/2
-        center_y: root.y + (root.height-12)
+        center_y: root.y + (root.height-20)
         text: "Live Video"        
 
 
@@ -56,23 +58,21 @@
             pos: root.x + root.width/2 - 5*root.height/12,root.y + root.height/12
     Image:
         id: polar_map
-        source:"polarGraph.png"
+        source:"./Images/polarGraph.png"
         size: root.height*5/6,root.height*5/6
         center: root.x + root.width/2,root.y + root.height/2
     Label:
-        font_size: "15dp" 
         center_x: root.x + root.width / 2
-        center_y: root.y + (root.height-12)
+        center_y: root.y + (root.height-20)
         text: "Position Map"
     
 
 <MenuButton@Button>:
-    font_size: 15
     size_hint: 1,1
 
 
 <TargetTextBox@TextInput>:
-    font_size: 8
+    font_size: "10dp"
     size_hint: 3/4,1/2
     center_x: root.parent.x + root.parent.width/2
     center_y: root.parent.y + root.parent.height
@@ -98,7 +98,7 @@
             background_color: 0,0,0,0
             canvas:
                 Rectangle:
-                    source: "ArrowUp.png"
+                    source: "./Images/ArrowUp.png"
                     pos: self.x,self.y
                     size: self.width,self.height
         
@@ -133,7 +133,7 @@
             background_color: 0,0,0,0
             canvas:
                 Rectangle:
-                    source: "ArrowLeft.png"
+                    source: "./Images/ArrowLeft.png"
                     pos: self.x,self.y
                     size: self.width,self.height
         
@@ -148,7 +148,7 @@
             background_color: 0,0,0,0
             canvas:
                 Rectangle:
-                    source: "ArrowRight.png"
+                    source: "./Images/ArrowRight.png"
                     pos: self.x,self.y
                     size: self.width,self.height
         
@@ -184,7 +184,7 @@
             background_color: 0,0,0,0
             canvas:
                 Rectangle:
-                    source: "ArrowDown.png"
+                    source: "./Images/ArrowDown.png"
                     pos: self.x,self.y
                     size: self.width,self.height
         
@@ -329,8 +329,7 @@
                                                     root.ids.velocity_label.text = app._mvs.vel_str + " mm/sec"
                                         Label:
                                             id: velocity_label
-                                            font_size: 15
-                                            # font_name: "Arial"
+                                            font_size: "10dp"
                                             text: "1 mm/sec"
 
                             AnchorLayout:
@@ -351,16 +350,21 @@
                                     ToggleButton:
                                         text: "XYZ"
                                         group: "Mode"
-                                        allow_no_selection: False
-                                        on_release:
-                                            app._mvs._travelMode = 0
-                                    ToggleButton:
-                                        text: "Radial"
-                                        group: "Mode"
                                         state: "down"
                                         allow_no_selection: False
                                         on_release:
+                                            app._mvs._travelMode = 0
+                                            app.parametric_funcs.append(["","",""])
+                                            app.root.ids.main_screen.ids.trajectory_log.text += "Target t_start f(x(t)) f(y(t)) f(z(t))\n"
+
+                                    ToggleButton:
+                                        text: "Radial"
+                                        group: "Mode"
+                                        allow_no_selection: False
+                                        on_release:
                                             app._mvs._travelMode = 1
+                                            app.parametric_funcs.append(["","",""])
+                                            app.root.ids.main_screen.ids.trajectory_log.text += "Target t_start f(r(t)) f(theta(t)) f(z(t))\n"
                             
                         # Motion Execution Frame
                         FrameOutline:
@@ -371,6 +375,7 @@
                             
                             # Target Assignment and Directional Movement Frame
                             MovementPane:
+                                id: movement_pane
                         
                             # Queue Next Target Button
                             AnchorLayout:
@@ -406,7 +411,6 @@
                                             size: self.parent.width,self.parent.height/32
                                     
                                     Label:
-                                        font_size: 15
                                         text: "Current Target"
                                         size_hint: 1,1/2
                                     
@@ -416,28 +420,31 @@
                                             anchor_y: "top"
                                             TargetTextBox:
                                                 id: x_target
-                                                # font_name: "Arial"
-                                                font_size: 13
                                                 hint_text: "X"
                                                 size_hint: 0.7,0.6
+                                                readonly: True
+                                                disabled: True
+                                                background_disabled_normal: ""
                                         AnchorLayout:
                                             anchor_y: "top"
                                             TargetTextBox:
                                                 id: y_target
-                                                # font_name: "Arial"
-                                                font_size: 13
                                                 halign: "center"
                                                 hint_text: "Y"
                                                 size_hint: 0.7,0.6
+                                                readonly: True
+                                                disabled: True
+                                                background_disabled_normal: ""
                                         AnchorLayout:
                                             anchor_x: "left"
                                             anchor_y: "top"
                                             TargetTextBox:
                                                 id: z_target
-                                                # font_name: "Arial"
-                                                font_size: 13
                                                 hint_text: "Z"
                                                 size_hint: 0.7,0.6
+                                                readonly: True
+                                                disabled: True
+                                                background_disabled_normal: ""
                                       
                                 BoxLayout:
                                     orientation: "vertical"
@@ -452,19 +459,13 @@
                                         anchor_y: "center"
                                         TextInput:
                                             id: trajectory_log
-                                            # font_name: "Arial" 
-                                            text: ""
-                                        # canvas:
-                                        #     Color: 
-                                        #         rgba: 1,1,1,1
-                                        #     Rectangle:
-                                        #         size: self.size
-                                        #         pos: self.pos
-                                        
-                                                           
-                                            
-                                
-                        
+                                            font_size: 20
+                                            color: 0,0,0
+                                            text: "" 
+                                            readonly: True
+                                            disabled: True
+                                            background_disabled_normal: ""
+
                         FrameOutline:
                             
                             GridLayout:
@@ -473,8 +474,10 @@
                                 #padding: "5dp"
                                 #spacing: "5dp"
                                 MenuButton:
-                                    id: retrace_button
-                                    text: "Retrace"
+                                    id: microscope_button
+                                    text: "Microscope"
+                                    on_release:
+                                        app._view_microscope
                                 MenuButton:
                                     id: import_button
                                     text: "Import"
@@ -530,8 +533,9 @@
             text: "Please specify the filepath."
         
         FileChooserListView:
-            path: '~/Documents/Professional/MichiganAerospace/GithubRepositories/MVS/'
-            on_selection: 
+            path: '~/Documents/Professional/MichiganAerospace/GithubRepositories/'
+            dirselect: True
+            on_selection:
                 filepath.text = self.selection and self.selection[0] or ''
         
         TextInput:
